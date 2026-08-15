@@ -1,0 +1,87 @@
+name: Update data.json
+
+on:
+  schedule:
+    - cron: '0 */8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch, validate and commit data.json
+        id: commit
+        run: |
+          set -e
+
+          # Retry the fetch up to 3 times; cancel the run if all fail.
+          for attempt in 1 2 3; do
+            echo "Fetch attempt $attempt of 3"
+            if curl -fsSL --max-time 180 \
+                "https://aml-api-eta.vercel.app/levels/ml/page/all/0/" \
+                -o /tmp/data.json \
+              && python3 -c "import json; d = json.load(open('/tmp/data.json')); assert isinstance(d, list) and len(d) > 0" 2>/dev/null; then
+              echo "Fetched and validated OK ($(wc -c < /tmp/data.json) bytes)"
+              break
+            fi
+            echo "Attempt $attempt failed"
+            if [ "$attempt" -eq 3 ]; then
+              echo "All 3 attempts failed; cancelling."
+              exit 1
+            fi
+            sleep 15
+          done
+
+          if cmp -s /tmp/data.json data.json; then
+            echo "data.json is already up to date"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            cp /tmp/data.json data.json
+            cp /tmp/data.json public/data.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data.json public/data.json
+            git commit -m "chore: update data.json from levels API"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: update-data
+    if: needs.update-data.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
