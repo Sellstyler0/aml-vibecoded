@@ -37,7 +37,7 @@ export default function List({ entries }) {
     parsePageParam(new URLSearchParams(window.location.search).get('page')),
   )
   const [pageSize, setPageSize] = useState(16)
-  const [weight, setWeight] = useState(0.5)
+  const [weight, setWeight] = useState(0.1)
   const [rngMin, setRngMin] = useState('')
   const [rngMax, setRngMax] = useState('')
   const [skillMin, setSkillMin] = useState('')
