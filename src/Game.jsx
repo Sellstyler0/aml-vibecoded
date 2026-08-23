@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import useModeFilters, { matchScore } from './useModeFilters.js'
+import FilterPanel from './FilterPanel.jsx'
 
 const ZOOM_LEVELS = [10, 30, 60, 100]
 const MAX_ATTEMPTS = 4
@@ -7,19 +9,12 @@ const MAX_SUGGESTIONS = 10
 const thumbUrl = (id) => `https://img.youtube.com/vi/${id}/hqdefault.jpg`
 const videoUrl = (id) => `https://www.youtube.com/watch?v=${id}`
 
-function matchScore(entry, query) {
-  const q = query.toLowerCase()
-  if (entry.name.toLowerCase().includes(q)) return 2
-  if (entry.game.toLowerCase().includes(q)) return 1
-  return 0
+function pickRandom(entriesList) {
+  return entriesList[Math.floor(Math.random() * entriesList.length)]
 }
 
-function pickRandom(entries) {
-  return entries[Math.floor(Math.random() * entries.length)]
-}
-
-function newGame(entries) {
-  return { target: pickRandom(entries), wrongCount: 0, phase: 'playing' }
+function newGame(entriesList) {
+  return { target: pickRandom(entriesList), wrongCount: 0, phase: 'playing' }
 }
 
 export default function Game({ entries }) {
@@ -28,18 +23,31 @@ export default function Game({ entries }) {
   const [selected, setSelected] = useState(-1)
   const inputRef = useRef(null)
 
+  const filters = useModeFilters(entries)
+  const { pool } = filters
+
   const target = game.target
+
+  useEffect(() => {
+    if (pool.length === 0) return
+    setGame(newGame(pool))
+    setQuery('')
+    setSelected(-1)
+  }, [pool])
 
   const suggestions = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (q.length === 0) return []
-    return entries
+    return pool
       .map((entry) => ({ entry, score: matchScore(entry, q) }))
       .filter(({ score }) => score > 0)
-      .sort((a, b) => b.score - a.score || a.entry.name.localeCompare(b.entry.name))
+      .sort(
+        (a, b) =>
+          b.score - a.score || a.entry.name.localeCompare(b.entry.name),
+      )
       .slice(0, MAX_SUGGESTIONS)
       .map(({ entry }) => entry)
-  }, [entries, query])
+  }, [pool, query])
 
   useEffect(() => {
     setSelected(-1)
@@ -80,7 +88,8 @@ export default function Game({ entries }) {
   const scale = Math.sqrt(100 / visiblePct)
 
   const playAgain = () => {
-    setGame(newGame(entries))
+    if (pool.length === 0) return
+    setGame(newGame(pool))
     setQuery('')
     setSelected(-1)
   }
@@ -90,6 +99,19 @@ export default function Game({ entries }) {
       <button className="back-btn" onClick={() => (window.location.hash = '#/')}>
         ← Back to list
       </button>
+
+      <FilterPanel
+        filters={filters}
+        actions={
+          <button
+            className="settings-newgame"
+            onClick={playAgain}
+            disabled={pool.length === 0}
+          >
+            New game
+          </button>
+        }
+      />
 
       {game.phase === 'won' && (
         <div className="game-result">
@@ -136,9 +158,16 @@ export default function Game({ entries }) {
         </div>
       )}
 
-      {game.phase === 'playing' && (
+      {game.phase === 'playing' && pool.length === 0 && (
+        <div className="game-empty">
+          <h1 className="game-title">Guess the Maxmode!</h1>
+          <p>No modes match your current settings. Adjust the filters above.</p>
+        </div>
+      )}
+
+      {game.phase === 'playing' && pool.length > 0 && (
         <>
-          <h1 className="game-title">Guess the mode</h1>
+          <h1 className="game-title">Guess the Maxmode!</h1>
           <p className="game-attempts">
             Attempts left: {MAX_ATTEMPTS - game.wrongCount} · {visiblePct}% visible
           </p>
@@ -169,7 +198,7 @@ export default function Game({ entries }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Guess the mode…"
+              placeholder="Guess the Maxmode…"
               autoComplete="off"
               spellCheck="false"
             />

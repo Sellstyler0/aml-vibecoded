@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import List from './List.jsx'
 import Detail from './Detail.jsx'
 import Game from './Game.jsx'
+import DrawGame from './DrawGame.jsx'
 import './App.css'
 
 function parseRoute() {
   if (window.location.hash.startsWith('#/game')) return { view: 'game' }
+  if (window.location.hash.startsWith('#/draw')) return { view: 'draw' }
   const match = window.location.hash.match(/^#\/mode\/(\d+)/)
   if (match) return { view: 'detail', id: Number(match[1]) }
   return { view: 'list' }
@@ -53,6 +55,8 @@ export default function App() {
     )
 
   if (route.view === 'game') return <Game entries={entries} />
+
+  if (route.view === 'draw') return <DrawGame entries={entries} />
 
   if (route.view === 'detail') {
     const entry = entries.find((e) => e.id === route.id)

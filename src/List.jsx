@@ -144,6 +144,13 @@ export default function List({ entries }) {
     setQuery('')
   }
 
+  const openRandomMode = () => {
+    const source = filtered.length > 0 ? filtered : entries
+    const entry = source[Math.floor(Math.random() * source.length)]
+    if (!entry) return
+    window.location.hash = `#/mode/${entry.id}`
+  }
+
   useEffect(() => {
     if (highlightId === null) return
     const el = document.getElementById(`mode-${highlightId}`)
@@ -161,8 +168,18 @@ export default function List({ entries }) {
           Page {currentPage} of {totalPages} · {sorted.length} challenges
         </p>
         <div className="top-right">
+          <button
+            className="random-btn"
+            onClick={openRandomMode}
+            title="Open a random mode"
+          >
+            Random mode
+          </button>
           <a className="game-link" href="#/game">
-            Play the game
+            Guess the Maxmode!
+          </a>
+          <a className="game-link alt" href="#/draw">
+            Draw a Maxmode!
           </a>
           <label className="page-size">
             <span>Per page</span>
