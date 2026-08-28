@@ -58,6 +58,36 @@
   white-space: nowrap;
 }
 
+.weight-presets {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.weight-preset {
+  background: #1b1e27;
+  color: #c3c9d4;
+  border: 1px solid #2a2f3c;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.weight-preset:hover {
+  background: #242937;
+  border-color: #3a4152;
+}
+
+.weight-preset.active {
+  background: #2f6feb;
+  border-color: #2f6feb;
+  color: #fff;
+}
+
 .filters {
   display: flex;
   align-items: center;

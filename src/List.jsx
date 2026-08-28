@@ -37,7 +37,7 @@ export default function List({ entries }) {
     parsePageParam(new URLSearchParams(window.location.search).get('page')),
   )
   const [pageSize, setPageSize] = useState(16)
-  const [weight, setWeight] = useState(0.1)
+  const [weight, setWeight] = useState(0)
   const [rngMin, setRngMin] = useState('')
   const [rngMax, setRngMax] = useState('')
   const [skillMin, setSkillMin] = useState('')
@@ -212,6 +212,26 @@ export default function List({ entries }) {
               aria-label="Skill vs RNG weighting"
             />
             <span className="weight-label">RNG</span>
+          </div>
+          <div className="weight-presets">
+            <button
+              className={`weight-preset${weight === 0 ? ' active' : ''}`}
+              onClick={() => setWeight(0)}
+            >
+              Skill 100%
+            </button>
+            <button
+              className={`weight-preset${weight === 0.1 ? ' active' : ''}`}
+              onClick={() => setWeight(0.1)}
+            >
+              Skill 90 / RNG 10
+            </button>
+            <button
+              className={`weight-preset${weight === 1 ? ' active' : ''}`}
+              onClick={() => setWeight(1)}
+            >
+              RNG 100%
+            </button>
           </div>
         </div>
         <div className="filters">
