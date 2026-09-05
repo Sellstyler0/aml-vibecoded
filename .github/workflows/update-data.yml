@@ -20,26 +20,33 @@ jobs:
     outputs:
       changed: ${{ steps.commit.outputs.changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Fetch, validate and commit data.json
         id: commit
         run: |
           set -e
 
+          URL="https://aml-api-eta.vercel.app/levels/ml/page/all/0/"
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36"
+
           # Retry the fetch up to 3 times; cancel the run if all fail.
           for attempt in 1 2 3; do
             echo "Fetch attempt $attempt of 3"
             if curl -fsSL --max-time 180 \
-                "https://aml-api-eta.vercel.app/levels/ml/page/all/0/" \
-                -o /tmp/data.json \
+                  -A "$UA" \
+                  -H "Accept: application/json" \
+                  "$URL" -o /tmp/data.json \
               && python3 -c "import json; d = json.load(open('/tmp/data.json')); assert isinstance(d, list) and len(d) > 0" 2>/dev/null; then
               echo "Fetched and validated OK ($(wc -c < /tmp/data.json) bytes)"
               break
             fi
+            if grep -qi "vercel security checkpoint" /tmp/data.json 2>/dev/null; then
+              echo "::error::The AML API is behind Vercel bot protection (Security Checkpoint) and refuses automated requests. Ask the API owner to disable Attack Challenge Mode, or refresh data.json manually and commit it."
+            fi
             echo "Attempt $attempt failed"
             if [ "$attempt" -eq 3 ]; then
-              echo "All 3 attempts failed; cancelling."
+              echo "::error::All 3 attempts failed; cancelling. The existing data.json is kept untouched."
               exit 1
             fi
             sleep 15
@@ -64,15 +71,15 @@ jobs:
     if: needs.update-data.outputs.changed == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run build
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 
